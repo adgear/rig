@@ -30,6 +30,7 @@ start_link() ->
 % Callbacks
 -spec init([]) -> {ok, term()}.
 init(_Args) ->
+    error_logger : info_msg( "rig_persist reporting to work in"),
     {ok, #state{}}.
 
 -spec handle_call(term(), pid(), term()) -> {ok, term()}.
@@ -46,13 +47,14 @@ handle_info({rig_index, update, Table}, State) ->
     {ok, Records} = rig:all(Table),
     rig_persist_utils:to_persistent_term(Records),
     Then = erlang:system_time(millisecond),
-    error_logger : info_msg( "persisted in ~p millsecs" , [ Then - Now ] ),
+    error_logger : info_msg( "rig_persist persisted in ~p millsecs" , [ Then - Now ] ),
     {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 
 -spec terminate(term(), term()) -> term().
-terminate(_Reason, _State) ->
+terminate(Reason, _State) ->
+    error_logger : info_msg( "rig_persist terminating with Reason: ~p~n",[Reason]),
     ok.
 
 -spec code_change(term(), term(), term()) -> {ok, term()}.
