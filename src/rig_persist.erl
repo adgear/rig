@@ -30,7 +30,7 @@ start_link() ->
 % Callbacks
 -spec init([]) -> {ok, term()}.
 init(_Args) ->
-    error_logger : info_msg( "rig_persist reporting to work in"),
+    error_logger : info_msg( "rig_persist reporting to work"),
     {ok, #state{}}.
 
 -spec handle_call(term(), pid(), term()) -> {ok, term()}.
