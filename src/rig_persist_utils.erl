@@ -62,8 +62,8 @@ persist(RecIds, _, Recs) ->
     PMap = build_persist_map(Recs),
     persistent_term:put({?PERSIST_TERM, ?PERSIST_LIST_NAME}, RecIds),
     persistent_term:put({?PERSIST_TERM, ?PERSIST_MAP_NAME}, PMap),
-    error_logger:info_msg("persist_map: ~p~n",
-                          [persistent_term:get({?PERSIST_TERM, ?PERSIST_MAP_NAME}, [])]),
+    error_logger:info_msg("persist_map has ~p members!~n",
+                          [length(RecIds)]),
     ok.
 
 get_field_value(Field, Record) ->
