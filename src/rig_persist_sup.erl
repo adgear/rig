@@ -1,4 +1,4 @@
--module(rig_sup).
+-module(rig_persist_sup).
 -include("rig.hrl").
 
 -export([
@@ -22,6 +22,4 @@ start_link() ->
     {ok, {{one_for_one, 5, 10}, [supervisor:child_spec()]}}.
 
 init([]) ->
-    rig_index:init(),
-    
-    {ok, {{one_for_one, 5, 10}, [?SUP_CHILD(rig_persist_sup),?CHILD(?SERVER)]}}.
+    {ok, {{one_for_one, 5, 10}, [?CHILD(rig_persist)]}}.

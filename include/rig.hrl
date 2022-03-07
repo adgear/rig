@@ -1,6 +1,7 @@
 %% macros
 -define(APP, rig).
 -define(CHILD(Mod), {Mod, {Mod, start_link, []}, permanent, 5000, worker, [Mod]}).
+-define(SUP_CHILD(Mod), {Mod, {Mod, start_link, []}, permanent, 5000, supervisor, [Mod]}).
 -define(FILE_READ_SIZE, 65536).
 -define(GET_ENV(Key, Default), application:get_env(?APP, Key, Default)).
 -define(LOOKUP(Key, List, Default), rig_utils:lookup(Key, List, Default)).

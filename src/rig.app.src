@@ -1,6 +1,6 @@
 {application, rig, [
   {description, "config manager"},
-  {vsn, "0.1.4"},
+  {vsn, "1.0.1"},
   {registered, []},
   {applications, [
     kernel,
