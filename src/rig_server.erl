@@ -174,6 +174,7 @@ reload({Name, Filename, DecoderFun, Opts}, Current, New) ->
         ok = rig_index:add(Name, New),
         Subscribers = ?LOOKUP(subscribers, Opts, ?DEFAULT_SUBSCRIBERS),
         [Pid ! {rig_index, update, Name} || Pid <- Subscribers],
+        rig_events:publish(Name, {rig_index, update, Name}),
         cleanup_table(Current),
         Diff = timer:now_diff(os:timestamp(), Timestamp) div 1000,
         error_logger:info_msg("~p config reloaded in ~p ms", [Name, Diff])
