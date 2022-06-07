@@ -38,7 +38,12 @@ start_link() ->
 init([]) ->
     case application:get_env(?APP, persist_topic) of
         {ok, Topic} ->
-            rig_events:subscribe(Topic);
+            case rig_events:subscribe(Topic) of
+                {ok, Event} ->
+                    self() ! Event;
+                ok ->
+                    ok
+            end;
         _ ->
             ok
     end,
