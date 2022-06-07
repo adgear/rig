@@ -36,7 +36,7 @@ start_link() ->
 % Callbacks
 -spec init([atom()]) -> {ok, term()}.
 init([]) ->
-    case application:get(?APP, persist_topic) of
+    case application:get_env(?APP, persist_topic) of
         {ok, Topic} ->
             rig_events:subscribe(Topic);
         _ ->
