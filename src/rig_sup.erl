@@ -24,4 +24,4 @@ start_link() ->
 init([]) ->
     rig_index:init(),
     
-    {ok, {{one_for_one, 5, 10}, [?SUP_CHILD(rig_persist_sup), ?CHILD(?SERVER), ?CHILD(rig_events)]}}.
+    {ok, {{one_for_one, 5, 10}, [?CHILD(rig_events), ?SUP_CHILD(rig_persist_sup), ?CHILD(?SERVER)]}}.

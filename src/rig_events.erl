@@ -34,7 +34,12 @@ publish(Name, Event) ->
 -spec subscribe(Name :: atom()) -> ok | {ok, MostRecentEvent :: term()}.
 subscribe(Name) ->
     gproc:reg(?TOPIC(Name)),
-    gen_server:call(?MODULE, {fetch, Name}).
+    try
+        gen_server:call(?MODULE, {fetch, Name})
+    catch
+        _:_:_ ->
+            ok
+    end.
 
 init([]) ->
     {ok, #state{}}.
