@@ -16,8 +16,14 @@
 % API
 -export([start_link/0]).
 % Callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-         code_change/3]).
+-export([
+    init/1,
+    handle_call/3,
+    handle_cast/2,
+    handle_info/2,
+    terminate/2,
+    code_change/3
+]).
 
 -record(state, {}).
 
@@ -28,9 +34,20 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 % Callbacks
--spec init([]) -> {ok, term()}.
-init(_Args) ->
-    error_logger : info_msg( "rig_persist reporting to work"),
+-spec init([atom()]) -> {ok, term()}.
+init([]) ->
+    case application:get_env(?APP, persist_topic) of
+        {ok, Topic} ->
+            case rig_events:subscribe(Topic) of
+                {ok, Event} ->
+                    self() ! Event;
+                ok ->
+                    ok
+            end;
+        _ ->
+            ok
+    end,
+    error_logger:info_msg("rig_persist reporting to work"),
     {ok, #state{}}.
 
 -spec handle_call(term(), pid(), term()) -> {ok, term()}.
@@ -47,17 +64,16 @@ handle_info({rig_index, update, Table}, State) ->
     {ok, Records} = rig:all(Table),
     rig_persist_utils:to_persistent_term(Records),
     Then = erlang:system_time(millisecond),
-    error_logger : info_msg( "persisted in ~p millsecs" , [ Then - Now ] ),
+    error_logger:info_msg("persisted in ~p millsecs", [Then - Now]),
     {noreply, State};
 handle_info(_Info, State) ->
     {noreply, State}.
 
 -spec terminate(term(), term()) -> term().
 terminate(Reason, _State) ->
-    error_logger : info_msg( "rig_persist terminating with Reason: ~p~n",[Reason]),
+    error_logger:info_msg("rig_persist terminating with Reason: ~p~n", [Reason]),
     ok.
 
 -spec code_change(term(), term(), term()) -> {ok, term()}.
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
-
