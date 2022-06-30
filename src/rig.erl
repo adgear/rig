@@ -12,8 +12,15 @@
     all/1,
     read/2,
     read/3,
+    read_v/2,
+    read_v/3,
     version/1
 ]).
+
+-export_type([version/0, value_version/0]).
+
+-type version() :: ets:tid().
+-type value_version() :: {value(), version()}.
 
 %% public
 -spec all(table()) ->
@@ -43,6 +50,23 @@ read(Table, Key) ->
             {error, unknown_table}
     end.
 
+-spec read_v(table(), key()) ->
+    {ok, value_version()} | {error, {unknown_key, version()} | unknown_table}.
+
+read_v(Table, Key) ->
+    try
+        Version = tid(Table),
+        ets:lookup(Version, Key)
+    of
+        [{Key, Value}] ->
+            {ok, {Value, Version}};
+        [] ->
+            {error, {unknown_key, Version}}
+    catch
+        _:_ ->
+            {error, unknown_table}
+    end.
+
 -spec read(table(), key(), value()) ->
     {ok, value()} | {error, unknown_table}.
 
@@ -50,6 +74,17 @@ read(Table, Key, Default) ->
     case read(Table, Key) of
         {error, unknown_key} ->
             {ok, Default};
+        X ->
+            X
+    end.
+
+-spec read_v(table(), key(), value()) ->
+    {ok, value_version()} | {error, unknown_table}.
+
+read_v(Table, Key, Default) ->
+    case read_v(Table, Key) of
+        {error, {unknown_key, Version}} ->
+            {ok, {Default, Version}};
         X ->
             X
     end.
