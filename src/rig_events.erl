@@ -41,9 +41,11 @@ subscribe(Name) ->
             ok
     end.
 
+-spec init([]) -> {ok, #state{}}.
 init([]) ->
     {ok, #state{}}.
 
+-spec handle_call({fetch, atom()}, {pid(), _}, #state{}) -> {reply, term(), #state{}}.
 handle_call({fetch, Name}, _From, State) ->
     Reply =
         case maps:find(Name, State#state.cache) of
@@ -52,12 +54,15 @@ handle_call({fetch, Name}, _From, State) ->
         end,
     {reply, Reply, State}.
 
+-spec handle_cast({save, atom(), term()}, #state{}) -> {noreply, #state{}}.
 handle_cast({save, Name, Event}, State = #state{cache = Cache}) ->
     WithNewEvent = Cache#{Name => Event},
     {noreply, State#state{cache = WithNewEvent}}.
 
+-spec handle_info(term(), #state{}) -> {noreply, #state{}}.
 handle_info(_Info, State) ->
     {noreply, State}.
 
+-spec terminate(term(), #state{}) -> ok.
 terminate(_Reason, _State) ->
     ok.
