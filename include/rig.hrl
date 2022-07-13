@@ -8,6 +8,7 @@
 -define(SERVER, rig_server).
 %% ETS tables
 -define(ETS_TABLE_INDEX, rig_index).
+-define(ETS_TABLE_LOCKS, rig_locks).
 %% msgs
 -define(MSG_RELOAD, reload).
 -define(MSG_RELOAD_CONFIG, reload_config).

@@ -92,7 +92,12 @@ async_reload(Config, Current, New) ->
 cleanup_table(undefined) ->
     ok;
 cleanup_table(Tid) ->
-    ets:delete(Tid).
+    case ets:lookup(?ETS_TABLE_LOCKS, Tid) of
+        [{_, Cnt}] when is_integer(Cnt), Cnt > 0 ->
+            ok;
+        _ ->
+            ets:delete(Tid)
+    end.
 
 configs_changed(Configs, Files) ->
     configs_changed(Configs, Files, []).

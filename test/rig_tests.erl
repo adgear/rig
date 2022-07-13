@@ -4,27 +4,41 @@
 
 -define(DECODER, "fun erlang:binary_to_term/1.").
 
+service_tabs() ->
+    [
+        ?ETS_TABLE_INDEX,
+        ?ETS_TABLE_LOCKS,
+        gproc,
+        gproc_monitor
+    ].
+
 rig_test() ->
     error_logger:tty(false),
     register(rig_test, self()),
     Count = length(ets:all()),
-    GProcTabs = [gproc, gproc_monitor],
 
     {error, unknown_table} = rig:read(domains, 1),
     {error, unknown_table} = rig:read(domains, 1, undefined),
 
     application:load(?APP),
     application:set_env(?APP, configs, [
+        % table #1 - creatives
         {creatives, "./test/files/creatives.bert", term, []},
         {"./test/files/", [
+            % table #2 - domains
             {domains, "domains.bert", term, [{key_element, 2}]},
+            % table #3 - dummy
             {dummy, "domains.bert", {test_config, dummy}, [{key_element, 3}]},
+            % no table created here
             {invalid_fun, "invalid.bert", "my_fun:decode/1.", []}
         ]},
+        % no table created here
         {invalid_file, "", ?DECODER, []},
+        % table #4 - users
         {users, "./test/files/users.bert", ?DECODER, [{key_element, 2},
             {subscribers, [rig_test]}]}
     ]),
+    TableCount = 4,
 
     encode_bert_configs(),
     {ok, _} = rig_app:start(),
@@ -32,7 +46,7 @@ rig_test() ->
     receive {rig_index, update, users} ->
         ok
     end,
-    Count = length(ets:all() -- GProcTabs) - 5,
+    Count = length(ets:all() -- service_tabs()) - TableCount,
 
     {ok, {domain, 1 , <<"adgear.com">>}} = rig:read(domains, 1),
     {ok, {domain, 1 , <<"adgear.com">>}} = rig:read(domains, 1, undefined),
@@ -52,8 +66,10 @@ rig_test() ->
     {ok, _Tid} = rig:version(creatives),
     {error, unknown_table} = rig:version(invalid),
 
+    % service tables created in supervisor's init, so application stop
+    % does not do any cleanup, so all the service tables left alive...
     rig_app:stop(),
-    Count = length(ets:all() -- GProcTabs).
+    Count = length(ets:all() -- service_tabs()).
 
 %% private
 encode_bert_configs() ->

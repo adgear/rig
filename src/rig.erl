@@ -10,10 +10,9 @@
 
 -export([
     all/1,
-    read/2,
-    read/3,
-    read_v/2,
-    read_v/3,
+    lock/1, unlock/1, locks/0,
+    read/2, read/3,
+    read_v/2, read_v/3,
     version/1
 ]).
 
@@ -35,6 +34,43 @@ all(Table) ->
         _:_ ->
             {error, unknown_table}
     end.
+
+% lock current version of the table
+-spec lock(table()) -> {ok, ets:tid()} | {error, Error :: _}.
+
+lock(Table) ->
+    try
+        Tid = tid(Table),
+        ets:update_counter(?ETS_TABLE_LOCKS, Tid, 1, {x, 0}),
+        {ok, Tid}
+    catch
+        _:_ ->
+            {error, unknown_table}
+    end.
+
+% unlock locked table version
+-spec unlock(ets:tid()) -> ok | {error, Error :: _}.
+
+unlock(Tid) ->
+    try
+        case ets:update_counter(?ETS_TABLE_LOCKS, Tid, {2, -1, 0, 0}, {x, 0}) of
+            0 ->
+                ets:delete(?ETS_TABLE_LOCKS, Tid),
+                ets:delete(Tid),
+                ok;
+            _ ->
+                ok
+        end
+    catch
+        _:_ ->
+            {error, bad_tid}
+    end.
+
+% list all locks with usage counters
+-spec locks() -> [{ets:tid(), pos_integer()}].
+
+locks() ->
+    ets:tab2list(?ETS_TABLE_LOCKS).
 
 -spec read(table(), key()) ->
     {ok, value()} | {error, unknown_key | unknown_table}.
