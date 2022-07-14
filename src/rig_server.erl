@@ -141,6 +141,10 @@ configs_validate([{Table, Filename, {Module, Function}, Options} | T], Acc) ->
     DecoderFun = fun Module:Function/1,
     configs_validate(T, [{Table, Filename, DecoderFun, Options} | Acc]);
 
+configs_validate([{Table, Filename, DecoderFun, Options} | T], Acc)
+        when is_function(DecoderFun, 1) ->
+    configs_validate(T,
+        [{Table, Filename, DecoderFun, Options} | Acc]);
 configs_validate([{Table, Filename, Decoder, Options} | T], Acc) ->
     case rig_utils:parse_fun(Decoder) of
         {ok, DecoderFun} ->

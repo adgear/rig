@@ -71,7 +71,74 @@ rig_test() ->
     rig_app:stop(),
     Count = length(ets:all() -- service_tabs()).
 
+lock_test() ->
+    error_logger:tty(true),
+    application:load(?APP),
+
+    DecoderFun = fun (_) -> {rand:uniform(), rand:uniform()} end,
+    Options = [{subscribers, [self()]}],
+    Config = {users, "./test/files/users.bert", DecoderFun, Options},
+    application:set_env(?APP, configs, [Config]),
+    encode_bert_configs(),
+
+    Tabs_0 = ets:all(),
+    {ok, _} = rig_app:start(),
+
+    % wait for initial data to be loaded
+    ok = wait_for_load_ack(users),
+
+    % initial content loaded
+    {ok, L1} = rig:all(users),
+
+    % lock current version
+    {ok, T1} = rig:lock(users),
+
+    % locked version matches initial data
+    L1 = ets:tab2list(T1),
+
+    ReloadFun = fun () ->
+        ?SERVER ! {?MSG_RELOAD_CONFIG, Config},
+        ok = wait_for_load_ack(users)
+    end,
+
+    % perform 10 random updates
+    repeat(10, ReloadFun),
+
+    % fetch most recent data
+    {ok, L2} = rig:all(users),
+
+    % locked version still matches initial data
+    L1 = ets:tab2list(T1),
+
+    % recent content should not match initial data
+    false = L1 == L2,
+
+    % 1 locked table + 2 generations are left
+    3 = length((ets:all() -- Tabs_0) -- service_tabs()),
+    rig:unlock(T1),
+
+    % 2 generations are left
+    2 = length((ets:all() -- Tabs_0) -- service_tabs()),
+
+    ok = rig_app:stop(),
+
+    % all service and data tabs deleted with the app stopped
+    0 = length((ets:all() -- Tabs_0)),
+
+    ok.
+
 %% private
+repeat(0, _) -> ok;
+repeat(N, F) -> F(), repeat(N-1, F).
+
+wait_for_load_ack(Name) ->
+    receive
+        {rig_index, update, Name} ->
+            ok
+        after 1000 ->
+            {error, timeout}
+    end.
+
 encode_bert_configs() ->
     [to_bert(Filename) || Filename <- filelib:wildcard("./test/files/*.term")].
 
