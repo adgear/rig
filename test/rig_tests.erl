@@ -71,6 +71,7 @@ rig_test() ->
     rig_app:stop(),
     Count = length(ets:all() -- service_tabs()).
 
+% single table lock / unlock test
 lock_test() ->
     error_logger:tty(true),
     application:load(?APP),
@@ -90,6 +91,9 @@ lock_test() ->
 
     % lock current version
     {ok, T1} = rig:lock(Table),
+
+    % verify locks/usage counter list
+    [{T1, 1}] = rig:locks(),
 
     % locked version matches initial data
     L1 = ets:tab2list(T1),
@@ -120,9 +124,79 @@ lock_test() ->
 
     ok.
 
+% multiple itable versions lock / unlock test
+multi_test() ->
+    error_logger:tty(false),
+    application:load(?APP),
+
+    {Table, Config, UpfateFun, WaitForAckFun} = init_table_config(),
+    application:set_env(?APP, configs, [Config]),
+    encode_bert_configs(),
+
+    Tabs_0 = ets:all(),
+    {ok, _} = rig_app:start(),
+
+    % wait for initial data to be loaded
+    ok = WaitForAckFun(),
+
+    % spawn workers (table readers)
+    Self = self(),
+    Pid = spawn(fun () -> workers(Table, 10, Self) end),
+
+    % data update loop
+    repeat(120, fun () ->
+        timer:sleep(random(0, 10)),
+        error_logger:info_msg("locks: ~p", [rig:locks()]),
+        UpfateFun()
+    end),
+
+    % wait workers to complete
+    ok = wait_pids([Pid], 5000),
+
+    % 2 generations are left
+    2 = length((ets:all() -- Tabs_0) -- service_tabs()),
+
+    ok = rig_app:stop(),
+
+    % all service and data tabs deleted with the app stopped
+    0 = length((ets:all() -- Tabs_0)),
+
+    ok.
+
 %% private
 repeat(0, _) -> ok;
 repeat(N, F) -> F(), repeat(N - 1, F).
+
+fold_repeat(0, _, Acc) -> Acc;
+fold_repeat(N, F, Acc) -> fold_repeat(N - 1, F, F(Acc)).
+
+random(Lo, Hi) -> Lo + rand:uniform(Hi - Lo + 1) - 1.
+
+workers(Table, Count, Parent) ->
+    Pid = self(),
+    Pids = fold_repeat(Count, fun (Acc) ->
+        timer:sleep(random(0, 20)),
+        [spawn(fun () -> worker(Table, Pid) end) | Acc]
+    end, []),
+    ok = wait_pids(Pids, 5000),
+    Parent ! {done, self()}.
+
+worker(Table, Pid) ->
+    {ok, T} = rig:lock(Table),
+    L = ets:tab2list(T),
+    timer:sleep(random(100, 1000)),
+    L = ets:tab2list(T),
+    rig:unlock(T),
+    Pid ! {done, self()}.
+
+wait_pids([], _) -> ok;
+wait_pids(Pids, Timeout) ->
+    receive
+        {done, Pid} ->
+            wait_pids(lists:delete(Pid, Pids), Timeout)
+        after Timeout ->
+            {error, timeout}
+    end.
 
 init_table_config() ->
     DecoderFun = fun (_) -> {rand:uniform(), rand:uniform()} end,
