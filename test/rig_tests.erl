@@ -75,9 +75,7 @@ lock_test() ->
     error_logger:tty(true),
     application:load(?APP),
 
-    DecoderFun = fun (_) -> {rand:uniform(), rand:uniform()} end,
-    Options = [{subscribers, [self()]}],
-    Config = {users, "./test/files/users.bert", DecoderFun, Options},
+    {Table, Config, UpfateFun, WaitForAckFun} = init_table_config(),
     application:set_env(?APP, configs, [Config]),
     encode_bert_configs(),
 
@@ -85,27 +83,22 @@ lock_test() ->
     {ok, _} = rig_app:start(),
 
     % wait for initial data to be loaded
-    ok = wait_for_load_ack(users),
+    ok = WaitForAckFun(),
 
     % initial content loaded
-    {ok, L1} = rig:all(users),
+    {ok, L1} = rig:all(Table),
 
     % lock current version
-    {ok, T1} = rig:lock(users),
+    {ok, T1} = rig:lock(Table),
 
     % locked version matches initial data
     L1 = ets:tab2list(T1),
 
-    ReloadFun = fun () ->
-        ?SERVER ! {?MSG_RELOAD_CONFIG, Config},
-        ok = wait_for_load_ack(users)
-    end,
-
     % perform 10 random updates
-    repeat(10, ReloadFun),
+    repeat(10, UpfateFun),
 
     % fetch most recent data
-    {ok, L2} = rig:all(users),
+    {ok, L2} = rig:all(Table),
 
     % locked version still matches initial data
     L1 = ets:tab2list(T1),
@@ -129,15 +122,25 @@ lock_test() ->
 
 %% private
 repeat(0, _) -> ok;
-repeat(N, F) -> F(), repeat(N-1, F).
+repeat(N, F) -> F(), repeat(N - 1, F).
 
-wait_for_load_ack(Name) ->
-    receive
-        {rig_index, update, Name} ->
-            ok
-        after 1000 ->
-            {error, timeout}
-    end.
+init_table_config() ->
+    DecoderFun = fun (_) -> {rand:uniform(), rand:uniform()} end,
+    Options = [{subscribers, [self()]}],
+    Config = {users, "./test/files/users.bert", DecoderFun, Options},
+    WaitForAckFun = fun () ->
+        receive
+            {rig_index, update, users} ->
+                ok
+            after 1000 ->
+                {error, timeout}
+        end
+    end,
+    UpfateFun = fun () ->
+        ?SERVER ! {?MSG_RELOAD_CONFIG, Config},
+        ok = WaitForAckFun()
+    end,
+    {users, Config, UpfateFun, WaitForAckFun}.
 
 encode_bert_configs() ->
     [to_bert(Filename) || Filename <- filelib:wildcard("./test/files/*.term")].
