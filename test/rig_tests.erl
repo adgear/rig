@@ -95,8 +95,24 @@ lock_test() ->
     % verify locks/usage counter list
     [{T1, 1}] = rig:locks(),
 
+    % test lock_t/1
+    2 = rig:lock_t(T1),
+    [{T1, 2}] = rig:locks(),
+    ok = rig:unlock(T1),
+    [{T1, 1}] = rig:locks(),
+
     % locked version matches initial data
     L1 = ets:tab2list(T1),
+
+    % test read_t api
+    lists:foreach(fun
+    ({Key, Value}) ->
+        {ok, Value} = rig:read_t(T1, Key),
+        {ok, Value} = rig:read_t(T1, Key, nil),
+        {ok, nil} = rig:read_t(T1, {Key, 1}, nil),
+        {error, unknown_key} = rig:read_t(T1, {Key, 1}),
+        {error, bad_tid} = rig:read_t(make_ref(), Key)
+    end, L1),
 
     % perform 10 random updates
     repeat(10, UpfateFun),

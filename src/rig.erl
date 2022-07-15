@@ -10,9 +10,11 @@
 
 -export([
     all/1,
-    lock/1, unlock/1, locks/0,
+    lock/1, lock_t/1,
+    unlock/1, locks/0,
     read/2, read/3,
     read_v/2, read_v/3,
+    read_t/2, read_t/3,
     version/1
 ]).
 
@@ -48,6 +50,17 @@ lock(Table) ->
             {error, unknown_table}
     end.
 
+% lock specific table version
+-spec lock_t(ets:tid()) -> integer() | {error, Error :: _}.
+
+lock_t(Tid) ->
+    try
+        ets:update_counter(?ETS_TABLE_LOCKS, Tid, 1, {x, 0})
+    catch
+        _:_ ->
+            {error, bad_tid}
+    end.
+
 % unlock locked table version
 -spec unlock(ets:tid()) -> ok | {error, Error :: _}.
 
@@ -72,6 +85,8 @@ unlock(Tid) ->
 locks() ->
     ets:tab2list(?ETS_TABLE_LOCKS).
 
+% read value
+
 -spec read(table(), key()) ->
     {ok, value()} | {error, unknown_key | unknown_table}.
 
@@ -85,6 +100,19 @@ read(Table, Key) ->
         _:_ ->
             {error, unknown_table}
     end.
+
+-spec read(table(), key(), value()) ->
+    {ok, value()} | {error, unknown_table}.
+
+read(Table, Key, Default) ->
+    case read(Table, Key) of
+        {error, unknown_key} ->
+            {ok, Default};
+        X ->
+            X
+    end.
+
+% read value and version
 
 -spec read_v(table(), key()) ->
     {ok, value_version()} | {error, {unknown_key, version()} | unknown_table}.
@@ -103,17 +131,6 @@ read_v(Table, Key) ->
             {error, unknown_table}
     end.
 
--spec read(table(), key(), value()) ->
-    {ok, value()} | {error, unknown_table}.
-
-read(Table, Key, Default) ->
-    case read(Table, Key) of
-        {error, unknown_key} ->
-            {ok, Default};
-        X ->
-            X
-    end.
-
 -spec read_v(table(), key(), value()) ->
     {ok, value_version()} | {error, unknown_table}.
 
@@ -124,6 +141,29 @@ read_v(Table, Key, Default) ->
         X ->
             X
     end.
+
+% read value for specific version
+
+read_t(Tid, Key) ->
+    try ets:lookup(Tid, Key) of
+        [{Key, Value}] ->
+            {ok, Value};
+        [] ->
+            {error, unknown_key}
+    catch
+        _:_ ->
+            {error, bad_tid}
+    end.
+
+read_t(Tid, Key, Default) ->
+    case read_t(Tid, Key) of
+        {error, unknown_key} ->
+            {ok, Default};
+        X ->
+            X
+    end.
+
+% get the current version
 
 -spec version(table()) ->
     {ok, ets:tid()} | {error, unknown_table}.
