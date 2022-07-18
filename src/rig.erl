@@ -51,10 +51,15 @@ lock(Table) ->
     end.
 
 % lock specific table version
--spec lock_t(ets:tid()) -> integer().
+-spec lock_t(ets:tid()) -> integer() | {error, bad_tid}.
 
 lock_t(Tid) ->
-    ets:update_counter(?ETS_TABLE_LOCKS, Tid, 1, {x, 0}).
+    try
+        ets:update_counter(?ETS_TABLE_LOCKS, Tid, 1)
+    catch
+        _:_ ->
+            {error, bad_tid}
+    end.
 
 % unlock locked table version
 -spec unlock(ets:tid()) -> ok | {error, Error :: _}.
