@@ -96,7 +96,8 @@ cleanup_table(Tid) ->
         [{_, Cnt}] when is_integer(Cnt), Cnt > 0 ->
             ok;
         _ ->
-            % Tid may be not part of ?ETS_TABLE_LOCKS already
+            % this may compete with rig:unlock/1,
+            % tid may be not part of ?ETS_TABLE_LOCKS already
             % so catch potential badarg caused by an attempt
             % do delete the table which is already deleted...
             catch ets:delete(Tid)

@@ -69,7 +69,10 @@ unlock(Tid) ->
         case ets:update_counter(?ETS_TABLE_LOCKS, Tid, {2, -1, 0, 0}, {x, 0}) of
             0 ->
                 ets:delete(?ETS_TABLE_LOCKS, Tid),
-                ets:delete(Tid),
+                % this may compete with rig_server:cleanup_table/1,
+                % catch potential badarg caused by an attempt
+                % do delete the table which is already deleted...
+                catch ets:delete(Tid),
                 ok;
             _ ->
                 ok
