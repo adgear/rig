@@ -51,7 +51,7 @@ lock(Table) ->
     end.
 
 % lock specific table version
--spec lock_t(ets:tid()) -> integer() | {error, bad_tid}.
+-spec lock_t(ets:tid()) -> pos_integer() | {error, bad_tid}.
 
 lock_t(Tid) ->
     try

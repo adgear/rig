@@ -56,11 +56,12 @@ rig_test() ->
     {ok, undefined} = rig:read(domains, 6, undefined),
 
     {ok, {user, 5, super_admin, <<"hello3">>}} = rig:read(users, 5),
-    {ok, [
+    {ok, Records} = rig:all(users),
+    [
         {1, {user, 1, lpgauth, <<"hello">>}},
         {3, {user, 3, root, <<"hello2">>}},
         {5, {user, 5, super_admin, <<"hello3">>}}
-    ]} = rig:all(users),
+    ] = lists:sort(Records),
     {error, unknown_table} = rig:all(invalid),
 
     {ok, _Tid} = rig:version(creatives),
@@ -73,7 +74,7 @@ rig_test() ->
 
 % single table lock / unlock test
 lock_test() ->
-    error_logger:tty(true),
+    error_logger:tty(false),
     application:load(?APP),
 
     {Table, Config, UpfateFun, WaitForAckFun} = init_table_config(),
