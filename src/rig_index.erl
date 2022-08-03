@@ -24,4 +24,8 @@ init() ->
         named_table,
         public
     ]),
+    ets:new(?ETS_TABLE_LOCKS, [
+        named_table,
+        public
+    ]),
     ok.

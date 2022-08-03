@@ -92,7 +92,16 @@ async_reload(Config, Current, New) ->
 cleanup_table(undefined) ->
     ok;
 cleanup_table(Tid) ->
-    ets:delete(Tid).
+    case ets:lookup(?ETS_TABLE_LOCKS, Tid) of
+        [{_, Cnt}] when is_integer(Cnt), Cnt > 0 ->
+            ok;
+        _ ->
+            % this may compete with rig:unlock/1,
+            % tid may be not part of ?ETS_TABLE_LOCKS already
+            % so catch potential badarg caused by an attempt
+            % do delete the table which is already deleted...
+            catch ets:delete(Tid)
+    end.
 
 configs_changed(Configs, Files) ->
     configs_changed(Configs, Files, []).
@@ -136,6 +145,10 @@ configs_validate([{Table, Filename, {Module, Function}, Options} | T], Acc) ->
     DecoderFun = fun Module:Function/1,
     configs_validate(T, [{Table, Filename, DecoderFun, Options} | Acc]);
 
+configs_validate([{Table, Filename, DecoderFun, Options} | T], Acc)
+        when is_function(DecoderFun, 1) ->
+    configs_validate(T,
+        [{Table, Filename, DecoderFun, Options} | Acc]);
 configs_validate([{Table, Filename, Decoder, Options} | T], Acc) ->
     case rig_utils:parse_fun(Decoder) of
         {ok, DecoderFun} ->
