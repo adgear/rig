@@ -1,0 +1,14 @@
+metadata:
+  name: rig
+  description: Auto-reloading Erlang configuration file indexer
+  labels:
+    jira-project: DEGA
+    jira-board: 189
+  links:
+  - url: https://github.com/adgear/rig/blob/master/README.md
+    title: Component Documentation Page
+
+spec:
+  owner: cg-dsp-bidding-systems
+  type: library
+  lifecycle: production
