@@ -146,7 +146,7 @@ read_v(Table, Key, Default) ->
     end.
 
 % read value for specific version
-
+-spec read_t(table(), key()) -> {ok, term()} | {error, term()}.
 read_t(Tid, Key) ->
     try ets:lookup(Tid, Key) of
         [{Key, Value}] ->
@@ -158,6 +158,7 @@ read_t(Tid, Key) ->
             {error, bad_tid}
     end.
 
+-spec read_t(table(), key(), term()) -> {ok, term()} | {error, term()}.
 read_t(Tid, Key, Default) ->
     case read_t(Tid, Key) of
         {error, unknown_key} ->
