@@ -79,8 +79,8 @@ parse_fun(Decoder) ->
 -spec read_file(file:io_device(), decoder(), ets:tid(),
     pos_integer()) -> ok.
 
-read_file(File, Decoder, Tid, KeyElement) ->
-    State = {Decoder, Tid, KeyElement},
+read_file(File, Decoder, Tid, KeyPos) ->
+    State = {Decoder, Tid, KeyPos},
     read_file_buf(File, <<>>, 0, State).
 
 %% private
@@ -104,31 +104,33 @@ parse_records(Bin, 0, State) when size(Bin) >= 4 ->
     parse_records(Rest, Size, State);
 parse_records(Bin, 0, _State) ->
     {Bin, 0};
-parse_records(Bin, Size, State) when size(Bin) >= Size ->
-    {Decoder, Tid, KeyElement} = State,
+parse_records(Bin, Size, {Decoder, Tid, KeyPos} = State) when size(Bin) >= Size ->
     <<Record:Size/binary, Rest/binary>> = Bin,
-    Record2 = Decoder(Record),
-    case Record2 of
+    case Decoder(Record) of
         {Key, Value} ->
             true = ets:insert(Tid, {Key, Value});
-        Tuple when is_tuple(Tuple) ->
-            Key = element(KeyElement, Record2),
-            true = ets:insert(Tid, {Key, Record2})
+        R when is_tuple(R) ->
+            Key = element(KeyPos, R),
+            true = ets:insert(Tid, {Key, R})
     end,
     parse_records(Rest, 0, State);
 parse_records(Bin, Size, _State) ->
     {Bin, Size}.
 
-read_file_buf(File, Buffer, Size, State) ->
+read_file_buf(File, Prefix, Size, State) ->
     case file:read(File, ?FILE_READ_SIZE * 2) of
         eof ->
             ok;
+        {ok, Bin} when Prefix == <<>> ->
+            parse_next(File, Bin, Size, State);
         {ok, Bin} ->
-            Bin2 = <<Buffer/binary, Bin/binary>>,
-            case parse_records(Bin2, Size, State) of
-                ok ->
-                    read_file_buf(File, <<>>, 0, State);
-                {Bin3, Size2} ->
-                    read_file_buf(File, Bin3, Size2, State)
-            end
+            parse_next(File, <<Prefix/binary, Bin/binary>>, Size, State)
+    end.
+
+parse_next(File, Bin, Size, State) ->
+    case parse_records(Bin, Size, State) of
+        ok ->
+            read_file_buf(File, <<>>, 0, State);
+        {Bin2, Size2} ->
+            read_file_buf(File, Bin2, Size2, State)
     end.
