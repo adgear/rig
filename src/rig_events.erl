@@ -45,7 +45,8 @@ subscribe(Name) ->
 init([]) ->
     {ok, #state{}}.
 
--spec handle_call({fetch, atom()}, {pid(), _}, #state{}) -> {reply, term(), #state{}}.
+-spec handle_call({fetch, atom()}, {pid(), _}, #state{}) ->
+{reply, term(), #state{}}.
 handle_call({fetch, Name}, _From, State) ->
     Reply =
         case maps:find(Name, State#state.cache) of
