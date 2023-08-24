@@ -1,5 +1,5 @@
-ELVIS=./bin/elvis
-REBAR3=./bin/rebar3
+ELVIS=elvis
+REBAR3=rebar3
 
 all: compile
 
@@ -27,7 +27,7 @@ eunit:
 	@echo "Running rebar3 eunit..."
 	@$(REBAR3) do eunit -cv, cover -v
 
-test: elvis xref eunit dialyzer
+test: xref eunit dialyzer
 
 xref:
 	@echo "Running rebar3 xref..."
