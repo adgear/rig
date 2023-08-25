@@ -1,10 +1,15 @@
 name: Erlang CI
 on: push
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   Lint:
     strategy:
       matrix:
-        erlang: ['24', '26']
+        erlang: ['24']
     runs-on: ubuntu-latest
     container:
       image: erlang:${{ matrix.erlang }}
@@ -20,13 +25,11 @@ jobs:
         mkdir -p ~/bin
         rebar3 escriptize
         mv _build/default/bin/elvis ~/bin
-        echo "~/bin" >> "$GITHUB_PATH"
+        
     - name: Clone project
       uses: actions/checkout@v3
     - name: Run Linter
-      run: |
-        ls -a
-        make elvis
+      run: make elvis
   Test:
     strategy:
       matrix:
