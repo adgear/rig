@@ -104,8 +104,7 @@ parse_records(Bin, 0, State) when size(Bin) >= 4 ->
     parse_records(Rest, Size, State);
 parse_records(Bin, 0, _State) ->
     {Bin, 0};
-parse_records(Bin, Size, {Decoder, Tid, KeyPos} = State)
-when size(Bin) >= Size ->
+parse_records(Bin, Size, {Decoder, Tid, KeyPos} = State) when size(Bin) >= Size ->
     <<Record:Size/binary, Rest/binary>> = Bin,
     case Decoder(Record) of
         {Key, Value} ->

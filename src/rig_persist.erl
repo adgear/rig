@@ -71,8 +71,7 @@ handle_info(_Info, State) ->
 
 -spec terminate(_, #state{}) -> ok.
 terminate(Reason, _State) ->
-    error_logger:
-    info_msg("rig_persist terminating with Reason: ~p~n", [Reason]),
+    error_logger:info_msg("rig_persist terminating with Reason: ~p~n", [Reason]),
     ok.
 
 -spec code_change(term(), term(), term()) -> {ok, term()}.
