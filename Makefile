@@ -1,4 +1,4 @@
-ELVIS=~bin/elvis
+ELVIS=~/bin/elvis
 REBAR3=rebar3
 
 all: compile
