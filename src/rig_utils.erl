@@ -50,8 +50,11 @@ lookup(Key, List, Default) ->
         {_, Value} -> Value
     end.
 
--spec match_all('$end_of_table' | {[any()], ets:continuation()}) ->
-    [[any()]].
+-spec match_all('$end_of_table' | {Match, Continuation}) -> Result
+    when
+        Continuation :: any(),
+        Match :: [any()],
+        Result :: [Match].
 
 match_all('$end_of_table') ->
     [];
