@@ -1,5 +1,4 @@
-ELVIS=./bin/elvis
-REBAR3=./bin/rebar3
+REBAR3=rebar3
 
 all: compile
 
@@ -11,10 +10,6 @@ compile:
 	@echo "Running rebar3 compile..."
 	@$(REBAR3) as compile compile
 
-coveralls:
-	@echo "Running rebar3 coveralls send..."
-	@$(REBAR3) as test coveralls send
-
 dialyzer:
 	@echo "Running rebar3 dialyze..."
 	@$(REBAR3) dialyzer
@@ -23,20 +18,18 @@ edoc:
 	@echo "Running rebar3 edoc..."
 	@$(REBAR3) as edoc edoc
 
-elvis:
-	@echo "Running elvis rock..."
-	@$(ELVIS) rock
+lint:
+	@echo "Running rebar3 lint..."
+	@$(REBAR3) lint
 
 eunit:
 	@echo "Running rebar3 eunit..."
 	@$(REBAR3) do eunit -cv, cover -v
 
-test: elvis xref eunit dialyzer
-
-travis: test coveralls
+test: xref eunit dialyzer
 
 xref:
 	@echo "Running rebar3 xref..."
 	@$(REBAR3) xref
 
-.PHONY: clean compile coveralls dialyzer edoc elvis eunit xref
+.PHONY: clean compile dialyzer edoc lint eunit xref

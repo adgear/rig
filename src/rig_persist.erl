@@ -26,15 +26,14 @@
 ]).
 
 -record(state, {}).
-
--define(PERSIST_CRITERIA, application:get_env(?APP, persist_criteria, [])).
+-type state() :: #state{}.
 
 -spec start_link() -> {ok, pid()}.
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 % Callbacks
--spec init([]) -> {ok, #state{}}.
+-spec init([]) -> {ok, state()}.
 init([]) ->
     case application:get_env(?APP, persist_topic) of
         {ok, Topic} ->
@@ -50,15 +49,15 @@ init([]) ->
     error_logger:info_msg("rig_persist reporting to work"),
     {ok, #state{}}.
 
--spec handle_call(_, {pid(), _}, #state{}) -> {reply, ignored, #state{}}.
+-spec handle_call(_, {pid(), _}, state()) -> {reply, ignored, state()}.
 handle_call(_Request, _From, State) ->
     {reply, ignored, State}.
 
--spec handle_cast(_, #state{}) -> {noreply, #state{}}.
+-spec handle_cast(_, state()) -> {noreply, state()}.
 handle_cast(_Msg, State) ->
     {noreply, State}.
 
--spec handle_info(_, #state{}) -> {noreply, #state{}}.
+-spec handle_info(_, state()) -> {noreply, state()}.
 handle_info({rig_index, update, Table}, State) ->
     Now = erlang:system_time(millisecond),
     {ok, Records} = rig:all(Table),
@@ -69,9 +68,10 @@ handle_info({rig_index, update, Table}, State) ->
 handle_info(_Info, State) ->
     {noreply, State}.
 
--spec terminate(_, #state{}) -> ok.
+-spec terminate(_, state()) -> ok.
 terminate(Reason, _State) ->
-    error_logger:info_msg("rig_persist terminating with Reason: ~p~n", [Reason]),
+    error_logger:info_msg(
+      "rig_persist terminating with Reason: ~p~n", [Reason]),
     ok.
 
 -spec code_change(term(), term(), term()) -> {ok, term()}.

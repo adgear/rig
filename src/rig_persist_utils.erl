@@ -27,8 +27,10 @@ extract_record(Record) ->
             {_, []} ->
                 false;
             {_, Recs} ->
-                Any = [lists:any(fun(RecId) -> lists:member(RecId, ?SELECTCRITERIA) end, RecIds)
-                       || {_, RecIds} <- Recs],
+                Any = [lists:any(
+                         fun(RecId) -> lists:member(RecId, ?SELECTCRITERIA) end,
+                         RecIds
+                       ) || {_, RecIds} <- Recs],
                 lists:member(true, Any);
             _ ->
                 false
@@ -44,7 +46,8 @@ find_records(Records) ->
 to_persistent_term(Records) ->
     Candidates = get_candidates(Records),
     CandidateIds =
-        lists:sort([get_id(Candidate) || Candidate <- Candidates, Candidate =/= []]),
+        lists:sort([get_id(Candidate)
+                    || Candidate <- Candidates, Candidate =/= []]),
     PrevIds = persistent_term:get({?MODULE, ?PERSIST_LIST_NAME}, []),
     persist(CandidateIds, PrevIds, Candidates).
 
@@ -72,10 +75,12 @@ get_field_value(Field, Record) ->
 
 get_field_values(Record) ->
     FirstList =
-        [{Field, get_field_value(Field, Record)} || Field <- get_env_value(map_fields)],
+        [{Field, get_field_value(Field, Record)}
+         || Field <- get_env_value(map_fields)],
     BoolSearch = value_from_boolean(Record),
     maps:from_list(
-        lists:append([{get_env_value(bool_field_name), BoolSearch}], FirstList)).
+        lists:append([{get_env_value(bool_field_name), BoolSearch}],
+                     FirstList)).
 
 build_persist_map(Candidates) ->
     [get_field_values(Candidate) || Candidate <- Candidates, Candidate =/= []].
@@ -140,11 +145,19 @@ get_record() ->
       {some_date, {{2022, 2, 21}, {18, 0, 0}}},
       {nonsense, [{6, [<<"IAMTHEONE">>]}]},
       {some_bul,
-       <<"((((isthisok=true and (\"IAMTHEONE\" in nonsense)))) and (i_partied_in in (\"DE\",\"FR\")) and ((within_months of (\"1\", \"3\")))">>}]].
+       <<"((((isthisok=true and (\"IAMTHEONE\" in nonsense)))) and "
+         "(i_partied_in in (\"DE\",\"FR\")) and "
+         "((within_months of (\"1\", \"3\")))">>}]].
 
 get_buls() ->
-    {<<"((number_of_countries_i_visited = 34) and (bob = somebloke) and (i_am_number= 1 and (\"THISISNOTNONSENSE\" in nonsense)) or (i_am_number = 6 and (\"IAMBESTEST\" in nonsense)) and (i_partied_in = \"US\") and ((my_phone_is = iphone)))">>,
-     <<"(((good_impression <> 'bob' or his_rating one of (worst))) and (((i_am_not_a_number = true and (\"IAMTHEONE\" in nonsense)))) and (i_partied_in in (\"CA\",\"US\")))">>}.
+    {<<"((number_of_countries_i_visited = 34) and "
+       "(bob = somebloke) and (i_am_number= 1 and "
+       "(\"THISISNOTNONSENSE\" in nonsense)) or "
+       "(i_am_number = 6 and (\"IAMBESTEST\" in nonsense)) and "
+       "(i_partied_in = \"US\") and ((my_phone_is = iphone)))">>,
+     <<"(((good_impression <> 'bob' or his_rating one of (worst))) and "
+       "(((i_am_not_a_number = true and (\"IAMTHEONE\" in nonsense)))) and "
+       "(i_partied_in in (\"CA\",\"US\")))">>}.
 
 test_criteria() ->
     [{select_criteria, [<<"IAMBESTEST">>, <<"IAMTHEONE">>]},

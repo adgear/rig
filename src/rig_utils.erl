@@ -50,8 +50,11 @@ lookup(Key, List, Default) ->
         {_, Value} -> Value
     end.
 
--spec match_all('$end_of_table' | {[any()], ets:continuation()}) ->
-    [[any()]].
+-spec match_all('$end_of_table' | {Match, Continuation}) -> Result
+    when
+        Continuation :: any(),
+        Match :: [any()],
+        Result :: [Match].
 
 match_all('$end_of_table') ->
     [];
@@ -104,7 +107,8 @@ parse_records(Bin, 0, State) when size(Bin) >= 4 ->
     parse_records(Rest, Size, State);
 parse_records(Bin, 0, _State) ->
     {Bin, 0};
-parse_records(Bin, Size, {Decoder, Tid, KeyPos} = State) when size(Bin) >= Size ->
+parse_records(Bin, Size, {Decoder, Tid, KeyPos} = State)
+  when size(Bin) >= Size ->
     <<Record:Size/binary, Rest/binary>> = Bin,
     case Decoder(Record) of
         {Key, Value} ->

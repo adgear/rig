@@ -67,7 +67,7 @@ The config files are length delimited using [base 128 varints][1] to encode leng
 
 ```makefile
 make dialyzer
-make elvis
+make lint
 make eunit
 make xref
 ```

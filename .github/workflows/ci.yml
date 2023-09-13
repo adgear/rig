@@ -1,0 +1,39 @@
+name: Erlang CI
+on: push
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  Lint:
+    strategy:
+      matrix:
+        erlang: ['24', '26']
+    runs-on: ubuntu-latest
+    container:
+      image: erlang:${{ matrix.erlang }}
+    steps:
+    - name: Clone project
+      uses: actions/checkout@v3
+    - name: Run Linter
+      run: make lint
+  Test:
+    strategy:
+      matrix:
+        erlang: ['24', '26']
+    runs-on: ubuntu-latest
+    container:
+      image: erlang:${{ matrix.erlang }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/cache@v3
+        env:
+          cache-name: rebar3
+        with:
+          path: |
+            _build
+            ~/.cache/rebar3
+          key: ci-${{runner.os}}-${{env.cache-name}}-erlang_${{matrix.erlang}}-rebar3-${{hashFiles('rebar.lock')}}
+      - name: tests
+        run: make test
