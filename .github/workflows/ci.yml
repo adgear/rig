@@ -14,22 +14,10 @@ jobs:
     container:
       image: erlang:${{ matrix.erlang }}
     steps:
-    - name: Clone Elvis linter project
-      uses: actions/checkout@v3
-      with:
-        repository: AntoineGagne/elvis
-        path: elvis
-    - name: Install Elvis (linter)
-      run: |
-        cd elvis
-        mkdir -p ~/bin
-        rebar3 escriptize
-        mv _build/default/bin/elvis ~/bin
-        
     - name: Clone project
       uses: actions/checkout@v3
     - name: Run Linter
-      run: make elvis
+      run: make lint
   Test:
     strategy:
       matrix:

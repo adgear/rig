@@ -1,4 +1,3 @@
-ELVIS=~/bin/elvis
 REBAR3=rebar3
 
 all: compile
@@ -19,9 +18,9 @@ edoc:
 	@echo "Running rebar3 edoc..."
 	@$(REBAR3) as edoc edoc
 
-elvis:
-	@echo "Running elvis rock..."
-	@$(ELVIS) rock
+lint:
+	@echo "Running rebar3 lint..."
+	@$(REBAR3) lint
 
 eunit:
 	@echo "Running rebar3 eunit..."
@@ -33,4 +32,4 @@ xref:
 	@echo "Running rebar3 xref..."
 	@$(REBAR3) xref
 
-.PHONY: clean compile coveralls dialyzer edoc elvis eunit xref
+.PHONY: clean compile dialyzer edoc lint eunit xref
