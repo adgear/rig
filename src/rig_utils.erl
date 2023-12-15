@@ -124,7 +124,7 @@ parse_records(Bin, Size, _State) ->
 apply_hook(Fun, Element) when is_function(Fun, 1) ->
     Fun(Element);
 apply_hook({Module, Fun}, Element) ->
-    erlang:apply(Module, Fun, [Element]).
+    Module:Fun(Element).
 
 read_file_buf(File, Prefix, Size, State) ->
     case file:read(File, ?FILE_READ_SIZE * 2) of
