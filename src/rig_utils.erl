@@ -12,7 +12,7 @@
     lookup/3,
     match_all/1,
     parse_fun/1,
-    read_file/4
+    read_file/5
 ]).
 
 %% public
@@ -80,10 +80,10 @@ parse_fun(Decoder) ->
     end.
 
 -spec read_file(file:io_device(), decoder(), ets:tid(),
-    pos_integer()) -> ok.
+    pos_integer(), post_hook()) -> ok.
 
-read_file(File, Decoder, Tid, KeyPos) ->
-    State = {Decoder, Tid, KeyPos},
+read_file(File, Decoder, Tid, KeyPos, PostHook) ->
+    State = {Decoder, Tid, KeyPos, PostHook},
     read_file_buf(File, <<>>, 0, State).
 
 %% private
@@ -107,15 +107,15 @@ parse_records(Bin, 0, State) when size(Bin) >= 4 ->
     parse_records(Rest, Size, State);
 parse_records(Bin, 0, _State) ->
     {Bin, 0};
-parse_records(Bin, Size, {Decoder, Tid, KeyPos} = State)
+parse_records(Bin, Size, {Decoder, Tid, KeyPos, PostHook} = State)
   when size(Bin) >= Size ->
     <<Record:Size/binary, Rest/binary>> = Bin,
     case Decoder(Record) of
         {Key, Value} ->
-            true = ets:insert(Tid, {Key, Value});
+            true = ets:insert(Tid, {Key, PostHook(Value)});
         R when is_tuple(R) ->
             Key = element(KeyPos, R),
-            true = ets:insert(Tid, {Key, R})
+            true = ets:insert(Tid, {Key, PostHook(R)})
     end,
     parse_records(Rest, 0, State);
 parse_records(Bin, Size, _State) ->

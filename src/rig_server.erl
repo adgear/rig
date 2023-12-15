@@ -182,7 +182,8 @@ reload({Name, Filename, DecoderFun, Opts}, Current, New) ->
         Timestamp = os:timestamp(),
         {ok, File} = file:open(Filename, [binary, read]),
         KeyElement = ?LOOKUP(key_element, Opts, ?DEFAULT_KEY_ELEMENT),
-        ok = rig_utils:read_file(File, DecoderFun, New, KeyElement),
+        PostHook = ?LOOKUP(post_hook, Opts, fun identity/1),
+        ok = rig_utils:read_file(File, DecoderFun, New, KeyElement, PostHook),
         ok = file:close(File),
         ok = rig_index:add(Name, New),
         Subscribers = ?LOOKUP(subscribers, Opts, ?DEFAULT_SUBSCRIBERS),
@@ -196,3 +197,6 @@ reload({Name, Filename, DecoderFun, Opts}, Current, New) ->
             error_logger:error_msg("error loading ~p: ~p:~p~n~p~n",
                 [Name, E, R, ?GET_STACK(Stacktrace)])
     end.
+
+identity(X) ->
+    X.

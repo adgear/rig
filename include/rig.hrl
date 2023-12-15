@@ -23,9 +23,10 @@
 -type basedir() :: string().
 -type config() :: {table(), file(), decoder(), options()}.
 -type decoder() :: fun((binary()) -> tuple()) | term | {module(), function()}.
+-type post_hook() :: fun((tuple()) -> tuple()) | {module(), function()}.
 -type file() :: string().
 -type key() :: term().
--type option() :: {key_element, pos_integer()} | {subscribers, [pid()]}.
+-type option() :: {key_element, pos_integer()} | {subscribers, [pid()]} | {post_hook, post_hook()}.
 -type options() :: [option()].
 -type table() :: atom().
 -type value() :: term().
