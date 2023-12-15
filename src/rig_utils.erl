@@ -112,14 +112,19 @@ parse_records(Bin, Size, {Decoder, Tid, KeyPos, PostHook} = State)
     <<Record:Size/binary, Rest/binary>> = Bin,
     case Decoder(Record) of
         {Key, Value} ->
-            true = ets:insert(Tid, {Key, PostHook(Value)});
+            true = ets:insert(Tid, {Key, apply_hook(PostHook, Value)});
         R when is_tuple(R) ->
             Key = element(KeyPos, R),
-            true = ets:insert(Tid, {Key, PostHook(R)})
+            true = ets:insert(Tid, {Key, apply_hook(PostHook, R)})
     end,
     parse_records(Rest, 0, State);
 parse_records(Bin, Size, _State) ->
     {Bin, Size}.
+
+apply_hook(Fun, Element) when is_function(Fun, 1) ->
+    Fun(Element);
+apply_hook({Module, Fun}, Element) ->
+    erlang:apply(Module, Fun, [Element]).
 
 read_file_buf(File, Prefix, Size, State) ->
     case file:read(File, ?FILE_READ_SIZE * 2) of
