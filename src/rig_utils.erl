@@ -12,8 +12,18 @@
     lookup/3,
     match_all/1,
     parse_fun/1,
-    read_file/4
+    read_file/5
 ]).
+
+-type merge() :: fun((Key :: term(),
+                      Old :: term(),
+                      New :: term()) -> Merged :: term()).
+-record(state, {
+    decoder :: fun((binary()) -> tuple()),
+    table :: ets:tid(),
+    key_position :: pos_integer(),
+    merge = undefined :: merge() | undefined
+}).
 
 %% public
 -spec change_time(file:filename()) ->
@@ -79,11 +89,19 @@ parse_fun(Decoder) ->
             {error, invalid_fun}
     end.
 
--spec read_file(file:io_device(), decoder(), ets:tid(),
-    pos_integer()) -> ok.
+-spec read_file(
+    file:io_device(),
+    decoder(),
+    ets:tid(),
+    pos_integer(),
+    merge() | undefined
+) -> ok.
 
-read_file(File, Decoder, Tid, KeyPos) ->
-    State = {Decoder, Tid, KeyPos},
+read_file(File, Decoder, Tid, KeyPos, Merge) ->
+    State = #state{decoder = Decoder,
+                   table = Tid,
+                   key_position = KeyPos,
+                   merge = Merge},
     read_file_buf(File, <<>>, 0, State).
 
 %% private
@@ -107,19 +125,38 @@ parse_records(Bin, 0, State) when size(Bin) >= 4 ->
     parse_records(Rest, Size, State);
 parse_records(Bin, 0, _State) ->
     {Bin, 0};
-parse_records(Bin, Size, {Decoder, Tid, KeyPos} = State)
-  when size(Bin) >= Size ->
+parse_records(
+    Bin,
+    Size,
+    #state{
+        decoder = Decoder,
+        key_position = KeyPos
+    } = State
+) when
+    size(Bin) >= Size
+->
     <<Record:Size/binary, Rest/binary>> = Bin,
     case Decoder(Record) of
         {Key, Value} ->
-            true = ets:insert(Tid, {Key, Value});
+            handle_merge(Key, Value, State);
         R when is_tuple(R) ->
             Key = element(KeyPos, R),
-            true = ets:insert(Tid, {Key, R})
+            handle_merge(Key, R, State)
     end,
     parse_records(Rest, 0, State);
 parse_records(Bin, Size, _State) ->
     {Bin, Size}.
+
+handle_merge(Key, Value, #state{merge = undefined, table = Tid}) ->
+    true = ets:insert(Tid, {Key, Value});
+handle_merge(Key, New, #state{merge = Merge, table = Tid}) ->
+    case ets:lookup(Tid, Key) of
+        [] ->
+            true = ets:insert(Tid, {Key, New});
+        [{_, Old}] ->
+            Merged = Merge(Key, Old, New),
+            true = ets:insert(Tid, {Key, Merged})
+    end.
 
 read_file_buf(File, Prefix, Size, State) ->
     case file:read(File, ?FILE_READ_SIZE * 2) of

@@ -29,16 +29,19 @@ rig_test() ->
             {domains, "domains.bert", term, [{key_element, 2}]},
             % table #3 - dummy
             {dummy, "domains.bert", {test_config, dummy}, [{key_element, 3}]},
+            % table #4
+            {duplicates, "duplicates.bert", {test_config, duplicate},
+                [{merger, {test_config, merge_duplicates}}]},
             % no table created here
             {invalid_fun, "invalid.bert", "my_fun:decode/1.", []}
         ]},
         % no table created here
         {invalid_file, "", ?DECODER, []},
-        % table #4 - users
+        % table #5 - users
         {users, "./test/files/users.bert", ?DECODER, [{key_element, 2},
             {subscribers, [rig_test]}]}
     ]),
-    TableCount = 4,
+    TableCount = 5,
 
     encode_bert_configs(),
     {ok, _} = rig_app:start(),
@@ -62,6 +65,10 @@ rig_test() ->
         {3, {user, 3, root, <<"hello2">>}},
         {5, {user, 5, super_admin, <<"hello3">>}}
     ] = lists:sort(Records),
+    ?assertMatch(
+        {ok, _},
+        rig:read(duplicates, string:casefold(<<"com.roku.popcornflix">>))
+    ),
     {error, unknown_table} = rig:all(invalid),
 
     {ok, _Tid} = rig:version(creatives),
