@@ -135,28 +135,51 @@ configs_validate(Configs) ->
 configs_validate([], Acc) ->
     lists:flatten(lists:reverse(Acc));
 configs_validate([{BaseDir, Configs} | T], Acc) ->
-    Configs2 = [{Table, BaseDir ++ Filename, DecoderFun, Options} ||
-        {Table, Filename, DecoderFun, Options} <- Configs],
+    Configs2 = [
+        {Table, BaseDir ++ Filename, DecoderFun, options_validate(Options)}
+        || {Table, Filename, DecoderFun, Options} <- Configs
+    ],
     configs_validate(T, [configs_validate(Configs2) | Acc]);
-configs_validate([{Table, Filename, term, Options} | T], Acc) ->
-    DecoderFun = fun erlang:binary_to_term/1,
-    configs_validate(T, [{Table, Filename, DecoderFun, Options} | Acc]);
-configs_validate([{Table, Filename, {Module, Function}, Options} | T], Acc) ->
-    DecoderFun = fun Module:Function/1,
-    configs_validate(T, [{Table, Filename, DecoderFun, Options} | Acc]);
-
-configs_validate([{Table, Filename, DecoderFun, Options} | T], Acc)
-        when is_function(DecoderFun, 1) ->
-    configs_validate(T,
-        [{Table, Filename, DecoderFun, Options} | Acc]);
 configs_validate([{Table, Filename, Decoder, Options} | T], Acc) ->
-    case rig_utils:parse_fun(Decoder) of
+    case to_decoder(Decoder) of
         {ok, DecoderFun} ->
-            configs_validate(T,
-                [{Table, Filename, DecoderFun, Options} | Acc]);
+            configs_validate(
+                T,
+                [{Table, Filename, DecoderFun, options_validate(Options)} | Acc]
+            );
         {error, invalid_fun} ->
             configs_validate(T, Acc)
     end.
+
+to_decoder(term) ->
+    {ok, fun erlang:binary_to_term/1};
+to_decoder({Module, Function}) ->
+    {ok, fun Module:Function/1};
+to_decoder(Function) when is_function(Function, 1) ->
+    {ok, Function};
+to_decoder(Decoder) ->
+    rig_utils:parse_fun(Decoder).
+
+options_validate(Options) ->
+    options_validate(Options, []).
+
+options_validate([], Acc) ->
+    Acc;
+options_validate([{key_element, N} | R], Acc) when is_integer(N), N > 0 ->
+    options_validate(R, [{key_element, N} | Acc]);
+options_validate([{subscribers, Subscribers} | R], Acc)
+  when is_list(Subscribers) ->
+    options_validate(R, [{subscribers, Subscribers} | Acc]);
+options_validate([{merger, {Module, Function}} | R], Acc) ->
+    options_validate(R, [{merger, fun Module:Function/3} | Acc]);
+options_validate([{merger, Function} | R], Acc) when is_function(Function, 3) ->
+    options_validate(R, [{merger, Function} | Acc]);
+options_validate([{Name, Value} | R], Acc) ->
+    error_logger:warning_msg(
+        "invalid option '~p' with value '~p'",
+        [Name, Value]
+    ),
+    options_validate(R, Acc).
 
 new_table(Name, Tids) ->
     New = ets:new(table, [public, {read_concurrency, true}]),
@@ -182,7 +205,8 @@ reload({Name, Filename, DecoderFun, Opts}, Current, New) ->
         Timestamp = os:timestamp(),
         {ok, File} = file:open(Filename, [binary, read]),
         KeyElement = ?LOOKUP(key_element, Opts, ?DEFAULT_KEY_ELEMENT),
-        ok = rig_utils:read_file(File, DecoderFun, New, KeyElement),
+        Merge = ?LOOKUP(merger, Opts, undefined),
+        ok = rig_utils:read_file(File, DecoderFun, New, KeyElement, Merge),
         ok = file:close(File),
         ok = rig_index:add(Name, New),
         Subscribers = ?LOOKUP(subscribers, Opts, ?DEFAULT_SUBSCRIBERS),
