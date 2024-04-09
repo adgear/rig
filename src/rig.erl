@@ -10,6 +10,7 @@
 
 -export([
     all/1,
+    info/1,
     lock/1, lock_t/1,
     unlock/1, locks/0,
     read/2, read/3,
@@ -22,6 +23,8 @@
 
 -type version() :: ets:tid().
 -type value_version() :: {value(), version()}.
+-type info() :: #{memory := undefined | non_neg_integer(),
+                  size := undefined | non_neg_integer()}.
 
 %% public
 -spec all(table()) ->
@@ -32,6 +35,18 @@ all(Table) ->
         MatchObject = ets:match_object(tid(Table), '_', 500),
         All = lists:append(rig_utils:match_all(MatchObject)),
         {ok, All}
+    catch
+        _:_ ->
+            {error, unknown_table}
+    end.
+
+-spec info(table()) -> {ok, info()} | {error, term()}.
+
+info(Table) ->
+    try
+        Tid = tid(Table),
+        Info = #{memory => ets:info(Tid, memory), size => ets:info(Tid, size)},
+        {ok, Info}
     catch
         _:_ ->
             {error, unknown_table}
