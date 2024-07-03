@@ -203,7 +203,7 @@ new_timer(Delay, Msg, Pid) ->
 reload({Name, Filename, DecoderFun, Opts}, Current, New) ->
     try
         Timestamp = os:timestamp(),
-        {ok, File} = file:open(Filename, [binary, read]),
+        {ok, File} = file:open(Filename, [binary, read, raw, read_ahead]),
         KeyElement = ?LOOKUP(key_element, Opts, ?DEFAULT_KEY_ELEMENT),
         Merge = ?LOOKUP(merger, Opts, undefined),
         ok = rig_utils:read_file(File, DecoderFun, New, KeyElement, Merge),
