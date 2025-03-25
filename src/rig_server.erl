@@ -40,14 +40,15 @@ init(_Name, _Parent, undefined) ->
     Configs2 = configs_validate(Configs),
 
     {Configs3, Timestamps} = configs_changed(Configs2, #{}),
-    Tids = configs_reload(Configs3, #{}),
+    {Configs4, Timestamps1, Tids} = load_prerequisites(Configs3, Timestamps, #{}),
+    Tids1 = configs_reload(Configs4, Tids),
 
     {ok, #state {
         configs = Configs2,
         reload_delay = ReloadDelay,
-        tids = Tids,
+        tids = Tids1,
         timer_ref = new_timer(ReloadDelay, ?MSG_RELOAD),
-        timestamps = Timestamps
+        timestamps = Timestamps1
     }}.
 
 -spec handle_msg(term(), term()) ->
@@ -55,16 +56,19 @@ init(_Name, _Parent, undefined) ->
 
 handle_msg(?MSG_RELOAD, #state {
         reload_delay = ReloadDelay,
-        timestamps = Timestamp,
-        configs = Configs
+        timestamps = Timestamps,
+        configs = Configs,
+        tids = Tids
     } = State) ->
 
-    {Configs2, Timestamp2} = configs_changed(Configs, Timestamp),
-    [?SERVER ! {?MSG_RELOAD_CONFIG, Config} || Config <- Configs2],
+    {Configs2, Timestamps2} = configs_changed(Configs, Timestamps),
+    {Configs3, Timestamps3, Tids1} = load_prerequisites(Configs2, Timestamps2, Tids),
+    [?SERVER ! {?MSG_RELOAD_CONFIG, Config} || Config <- Configs3],
 
     {ok, State#state {
-        timestamps = Timestamp2,
-        timer_ref = new_timer(ReloadDelay, ?MSG_RELOAD)
+        timestamps = Timestamps3,
+        timer_ref = new_timer(ReloadDelay, ?MSG_RELOAD),
+        tids = Tids1
     }};
 handle_msg({?MSG_RELOAD_CONFIG, {Name, _, _, _} = Config}, #state {
         tids = Tids
@@ -101,6 +105,25 @@ cleanup_table(Tid) ->
             % so catch potential badarg caused by an attempt
             % do delete the table which is already deleted...
             catch ets:delete(Tid)
+    end.
+
+load_prerequisites(Configs, Timestamps, Tids) ->
+    case persistent_term:get(rig_hook_mf, undefined) of
+        {Mod, Fun} when is_atom(Mod), is_atom(Fun) ->
+            load_prerequisites_(Configs, Mod, Fun, Timestamps, Tids);
+        _ ->
+            {Configs, Timestamps, Tids}
+    end.
+
+load_prerequisites_(Configs, Mod, Fun, Timestamps, Tids) ->
+    case Mod:Fun(Configs, Timestamps) of
+        {load, LoadNowConfigs} ->
+            Tids_ = configs_reload(LoadNowConfigs, Tids),
+            Loaded = [Tab || {Tab, _, _, _} <- LoadNowConfigs],
+            Configs_ = lists:filter(fun ({X, _, _, _}) -> not lists:member(X, Loaded) end, Configs),
+            load_prerequisites_(Configs_, Mod, Fun, Timestamps, Tids_);
+        {pass, Configs_} ->
+            {Configs_, Timestamps, Tids}
     end.
 
 configs_changed(Configs, Files) ->
@@ -202,6 +225,7 @@ new_timer(Delay, Msg, Pid) ->
 
 reload({Name, Filename, DecoderFun, Opts}, Current, New) ->
     try
+        error_logger:info_msg("reloading ~p config...", [Name]),
         Timestamp = os:timestamp(),
         {ok, File} = file:open(Filename, [
             binary,

@@ -137,6 +137,8 @@ parse_records(
 ->
     <<Record:Size/binary, Rest/binary>> = Bin,
     case Decoder(Record) of
+        ignore ->
+            ok;
         {Key, Value} ->
             handle_merge(Key, Value, State);
         R when is_tuple(R) ->
