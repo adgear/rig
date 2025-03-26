@@ -40,7 +40,8 @@ init(_Name, _Parent, undefined) ->
     Configs2 = configs_validate(Configs),
 
     {Configs3, Timestamps} = configs_changed(Configs2, #{}),
-    {Configs4, Timestamps1, Tids} = load_prerequisites(Configs3, Timestamps, #{}),
+    {Configs4, Timestamps1, Tids} =
+        load_prerequisites(Configs3, Timestamps, #{}),
     Tids1 = configs_reload(Configs4, Tids),
 
     {ok, #state {
@@ -62,7 +63,8 @@ handle_msg(?MSG_RELOAD, #state {
     } = State) ->
 
     {Configs2, Timestamps2} = configs_changed(Configs, Timestamps),
-    {Configs3, Timestamps3, Tids1} = load_prerequisites(Configs2, Timestamps2, Tids),
+    {Configs3, Timestamps3, Tids1} =
+        load_prerequisites(Configs2, Timestamps2, Tids),
     [?SERVER ! {?MSG_RELOAD_CONFIG, Config} || Config <- Configs3],
 
     {ok, State#state {
@@ -120,7 +122,9 @@ load_prerequisites_(Configs, Mod, Fun, Timestamps, Tids) ->
         {load, LoadNowConfigs} ->
             Tids_ = configs_reload(LoadNowConfigs, Tids),
             Loaded = [Tab || {Tab, _, _, _} <- LoadNowConfigs],
-            Configs_ = lists:filter(fun ({X, _, _, _}) -> not lists:member(X, Loaded) end, Configs),
+            Configs_ = lists:filter(fun
+                ({X, _, _, _}) -> not lists:member(X, Loaded)
+            end, Configs),
             load_prerequisites_(Configs_, Mod, Fun, Timestamps, Tids_);
         {pass, Configs_} ->
             {Configs_, Timestamps, Tids}

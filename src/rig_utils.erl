@@ -19,7 +19,7 @@
                       Old :: term(),
                       New :: term()) -> Merged :: term()).
 -record(state, {
-    decoder :: fun((binary()) -> tuple()),
+    decoder :: fun((binary()) -> tuple() | ignore),
     table :: ets:tid(),
     key_position :: pos_integer(),
     merge = undefined :: merge() | undefined
