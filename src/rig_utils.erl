@@ -19,7 +19,7 @@
                       Old :: term(),
                       New :: term()) -> Merged :: term()).
 -record(state, {
-    decoder :: fun((binary()) -> tuple()),
+    decoder :: fun((binary()) -> tuple() | ignore),
     table :: ets:tid(),
     key_position :: pos_integer(),
     merge = undefined :: merge() | undefined
@@ -137,6 +137,8 @@ parse_records(
 ->
     <<Record:Size/binary, Rest/binary>> = Bin,
     case Decoder(Record) of
+        ignore ->
+            ok;
         {Key, Value} ->
             handle_merge(Key, Value, State);
         R when is_tuple(R) ->
