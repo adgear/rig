@@ -108,7 +108,7 @@ cleanup_table(Tid) ->
     end.
 
 load_prerequisites(Configs, Timestamps, Tids) ->
-    case persistent_term:get(rig_hook_mf, undefined) of
+    case ?GET_ENV(data_load_hook, undefined) of
         {Mod, Fun} when is_atom(Mod), is_atom(Fun) ->
             load_prerequisites_(Configs, Mod, Fun, Timestamps, Tids);
         _ ->
