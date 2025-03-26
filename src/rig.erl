@@ -84,11 +84,17 @@ unlock(Tid) ->
         case ets:update_counter(?ETS_TABLE_LOCKS, Tid, {2, -1, 0, 0}, {x, 0}) of
             0 ->
                 ets:delete(?ETS_TABLE_LOCKS, Tid),
-                % this may compete with rig_server:cleanup_table/1,
-                % catch potential badarg caused by an attempt
-                % do delete the table which is already deleted...
-                catch ets:delete(Tid),
-                ok;
+                case ets:match(?ETS_TABLE_INDEX, {'_', Tid}) of
+                    [] ->
+                        % this may compete with rig_server:cleanup_table/1,
+                        % catch potential badarg caused by an attempt
+                        % do delete the table which is already deleted...
+                        catch ets:delete(Tid),
+                        ok;
+                    _ ->
+                        % active table unlocked, keep it
+                        ok
+                end;
             _ ->
                 ok
         end
